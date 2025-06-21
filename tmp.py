@@ -1,105 +1,18 @@
 import os
-from google.adk.agents import LlmAgent, SequentialAgent, ParallelAgent, Agent
+from google.adk.agents import LlmAgent, SequentialAgent, ParallelAgent, BaseAgent
+import google.adk.agents as agents
 from google.adk.tools import FunctionTool, VertexAiSearchTool, google_search
 from google.adk.runners import InMemoryRunner
 # New import for listing data stores
 from google.cloud import discoveryengine_v1alpha as discoveryengine
-from pydantic import BaseModel, Field
-from typing import List
 
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
+
+
 MODEL = "gemini-2.5-flash"
-# --- Architecture Overview ---
-# This version simplifies the workflow by always searching all available data stores.
-# It removes the need for an agent to select which stores to search.
-#
-# 1.  SearchCoordinatorAgent: Uses a single tool to list all available data stores
-#     and immediately performs a search in each one, aggregating the results.
-# 2.  AnalysisAgent: Reasons over the comprehensive, multi-source data.
-# 3.  SummarizerAgent: Formats the final report.
 
-class CategoryOutput(BaseModel):
-    categories: List[str] = Field(description="The list of area of interest of the lawyer")
-
-user_analyser_structured = Agent(
-    name="UserAnalyser",
-    model=MODEL,
-    description="Analyzes user input to determine area interest of the lawyer.",
-    instruction="""
-You are an AI assistant designed to extract key information from professional biographies. Your task is to analyze the text about a lawyer and extract their primary area(s) of legal practice.
-
-Return the answer as a JSON object with a key called "areas_of_interest" which contains a list of the identified specializations. and the data you should read is from {user_interest}
-
----
-**EXAMPLE 1:**
-**Text:** "Maria Rodriguez is a dedicated attorney with over 15 years of experience in helping families navigate the complexities of divorce, child custody, and adoption proceedings. She is a certified mediator and a strong advocate for her clients' rights."
-**JSON Response:**
-{
-  "areas_of_interest": ["Family Law", "Divorce", "Child Custody", "Adoption", "Mediation"]
-}
----
-**EXAMPLE 2:**
-**Text:** "John Chen heads the intellectual property division at his firm. He focuses on patent litigation, trademark registration, and copyright law, representing tech startups and established corporations."
-**JSON Response:**
-{
-  "areas_of_interest": ["Intellectual Property", "Patent Litigation", "Trademark Law", "Copyright Law"]
-}
----
-**ACTUAL TASK:**
-**Text:**{PASTE LAWYER'S BIO TEXT HERE}
-**JSON Response:**
-{
-"area_of_interest":["category1", "category2"]
-}
-    """,
-    output_schema=CategoryOutput
-    )
-
-
-user_analyser_2 = LlmAgent(
-    name="UserAnalyser",
-    model=MODEL,
-    description="Analyzes user input to determine area interest of the lawyer.",
-    instruction="""
-    Lawyer Profile Generator
-    You are an expert legal researcher. Your task is to gather publicly available information about a specific lawyer, focusing on their areas of interest and client work.
-
-    Given the lawyer's full name and email address, perform a comprehensive search to identify, use the google_search tool to find information about the lawyer's
-    You might wanna focus on this website `https://www.linklaters.com/en/find-a-lawyer`:
-
-    Areas of Interest/Specialization: What specific legal fields, industries, or types of cases does this lawyer focus on? Look for keywords like "practice areas," "specialties," "expertise," or "industries served."
-    Client Work/Notable Cases: Identify any publicly disclosed information about clients they have represented or significant cases they have been involved in. This might include:
-    Specific company names or types of organizations.
-    Details about high-profile or landmark cases.
-    Descriptions of the types of legal issues they commonly handle for clients.
-    Important Considerations:
-
-    Prioritize information from reputable sources such as law firm websites, legal directories (e.g., Chambers and Partners, Legal 500, Martindale-Hubbell), bar association profiles, and reputable legal news outlets.
-    Be mindful of client confidentiality. Only provide information that is already in the public domain. Do not attempt to access private or restricted information.
-    If you cannot find specific client names, generalize the types of clients or industries they serve if that information is available.
-    If no information is found for a particular category, state that explicitly.
-    Input:
-
-    Lawyer's Name: [Insert Lawyer's Full Name Here]
-    Lawyer's Email Address: [Insert Lawyer's Email Address Here]
-    Output Format:
-
-    Present the information clearly and concisely, using the following structure by storing the to state in the following fields under "user"
-    * areas_of_interest: A list of specific areas of interest or specialization.
-    * client_work: A list of notable clients or cases, or a description of typical client types or case categories.
-    * general_descripton of the lawyer's practice if specific information is not found, e.g., "Corporate Law," "Intellectual Property," etc.
-    Example Output:
-
-    state["user"]["areas_of_interest"]: ["Corporate Law", "Intellectual Property", "Mergers and Acquisitions"]
-    state["user"]["client_work"]: ["Represented XYZ Corporation in a high-profile merger", "Advised ABC Tech on patent litigation"]
-    state["user']["general_description"]: "The lawyer specializes in corporate law, particularly in mergers and acquisitions, and has a strong focus on intellectual property issues."
-    """,
-    tools=[google_search],  # Include the search tool directly in the agent
-    output_key="user_interest"  # Specify the output keys for structured data
-)
-category_agent = SequentialAgent(name="category", sub_agents=[user_analyser_2, user_analyser_structured])
-    
+# user_analyser 
 user_analyser = LlmAgent(
     name="UserAnalyser",
     model=MODEL,
@@ -369,6 +282,4 @@ email_sender_agent = LlmAgent(
     output_key="email_status"  # Specify the output key for the email status
 )
 
-
-root_agent = SequentialAgent(name="MyPipeline", sub_agents=[research_team, report_generator_agent, html_styler, email_sender_agent])
-# root_agent = usl
+root_agent = SequentialAgent(name="MyPipeline", sub_agents=[research_team, report_generator_agent, html_styler,email_sender_agent],)
