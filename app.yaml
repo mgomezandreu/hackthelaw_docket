@@ -1,0 +1,25 @@
+# app.yaml
+runtime: python312  # Specify the Python runtime version
+
+# App Engine scales by creating instances. You can configure these settings.
+instance_class: F1
+
+# The entrypoint specifies the command to start your app.
+# gunicorn is a production-grade web server.
+# -b :$PORT tells gunicorn to bind to the port specified by the PORT environment variable.
+# main:app tells gunicorn to look for an object named `app` in a file named `main.py`.
+entrypoint: gunicorn -b :$PORT app:app
+
+# Handlers configure which URLs are handled by your app.
+# 'script: auto' lets App Engine handle all traffic with your app.
+handlers:
+- url: /.*
+  script: auto
+
+automatic_scaling:
+  target_cpu_utilization: 0.65
+  min_instances: 0
+  max_instances: 10
+  min_pending_latency: 30ms
+  max_pending_latency: automatic
+  max_concurrent_requests: 50
