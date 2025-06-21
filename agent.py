@@ -179,14 +179,14 @@ news_query_agent = LlmAgent(
     Formatting: Present each summary using the exact template provided above, including bolding for section headers.
     
     Print a quick overview of what you found to the chat, but keep the full information in the state under "news" key.
-    """,
-    output_key="news"  # Specify the output keys for structured data
-    
-)
     # FCA Publications: https://www.fca.org.uk/news
     # Bank of England Publications: https://www.bankofengland.co.uk/news/
     # Supreme Court Cases: https://www.supremecourt.uk/news/index.html (Note: You may need to navigate within this site to find specific judgment publications.)
     # For each new and relevant development identified, you must generate a summary following this exact templeta in the state under "news":
+    """,
+    output_key="news"  # Specify the output keys for structured data
+    
+)
 
 
 report_generator_agent = LlmAgent(
